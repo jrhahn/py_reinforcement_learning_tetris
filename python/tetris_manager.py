@@ -1,6 +1,8 @@
 import numpy as np
 from tetris_block import TetrisBlock
 
+import matplotlib.pyplot as plt
+
 
 class TetrisManager:
     GAME_STATE_OK = 'game_state_ok'
@@ -25,7 +27,6 @@ class TetrisManager:
         return self.block_active.update_grid(self.n_array, do_copy=True)
 
     def create_new_block(self):
-        print("Creating new block")
         self.block_active = TetrisBlock(self.image, self.size_grid_x, self.size_grid_y, **self.tetris_block_parameters)
 
     def draw(self):
@@ -55,28 +56,24 @@ class TetrisManager:
         return self.block_active.get_y()
 
     def check_if_line_is_full(self):
-        for y in range(self.size_grid_y - 1, -1, -1):
-            is_complete = True
-
-            for x in range(self.n_array.shape[0]):
-                is_complete = (self.n_array[x, y] > 0) and is_complete
+        # for y in range(self.size_grid_y - 1, -1, -1):
+        for y in range(self.size_grid_y):
+            is_complete = (self.n_array[:, y] > 0).all()
 
             if is_complete:
                 self.score += 1
-                for y_ in range(y, self.size_grid_y - 1):
-                    for x in range(self.n_array.shape[0]):
-                        self.n_array[x, y_] = self.n_array[x, y_ + 1]
+                self.n_array[:, y:-1] = self.n_array[:, y + 1:]
 
     def update(self, delta_time):
         self.n_array = self.block_active.update(self.n_array, delta_time)
 
         if not self.block_active.is_active:
-            print("is down")
             self.create_new_block()
 
             self.check_if_line_is_full()
 
-        if self.n_array[:, -1].sum() > 0:
+        if self.n_array[:, -2].sum() > 0:
+            print("***NEW GAME***")
             return TetrisManager.GAME_STATE_END
 
         return TetrisManager.GAME_STATE_OK

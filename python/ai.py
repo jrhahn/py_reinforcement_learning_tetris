@@ -22,10 +22,7 @@ class Memory():
 
     def sample(self, batch_size):
         buffer_size = len(self.buffer)
-        try:
-            index = np.random.choice(np.arange(buffer_size), size=batch_size, replace=False)
-        except:
-            print("bam")
+        index = np.random.choice(np.arange(buffer_size), size=batch_size, replace=False)
 
         return [self.buffer[i] for i in index]
 
