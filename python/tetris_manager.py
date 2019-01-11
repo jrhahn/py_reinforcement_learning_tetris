@@ -62,6 +62,8 @@ class TetrisManager:
 
             if is_complete:
                 self.score += 1
+                print("Score: {}".format(self.score))
+                # move lines
                 self.n_array[:, y:-1] = self.n_array[:, y + 1:]
 
     def update(self, delta_time):

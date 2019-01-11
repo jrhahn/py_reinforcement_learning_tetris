@@ -147,7 +147,8 @@ class TetrisBlock:
         self.is_active = True
 
         self.type = BlockType.random()
-        self.current_rotation = 0
+        self.rotation = 0
+        self.rotation_pending = 0
 
         self.thresh_time_passed_input = kwargs.pop('thresh_time_passed_input', 0.03)
         self.thresh_time_passed_drop = kwargs.pop('thresh_time_passed_drop', .3)
@@ -172,16 +173,16 @@ class TetrisBlock:
         # self.array = np.array(self.array)
 
         # self.update_bounding_box()
-        width = self.array[self.current_rotation].shape[0]
-        height = self.array[self.current_rotation].shape[1]
+        width = self.array[self.rotation].shape[0]
+        height = self.array[self.rotation].shape[1]
         self.x_grid = np.random.randint(0, size_grid_x - width)
         self.y_grid = self.size_grid_y - height - 1
 
     def rotate(self):
-        self.current_rotation += 1
+        self.rotation_pending += 1
 
-        if self.current_rotation >= len(self.array):
-            self.current_rotation = 0
+        if self.rotation_pending >= len(self.array):
+            self.rotation_pending = 0
 
     def drop(self, array, delta_time):
         self.time_passed_drop += delta_time
@@ -189,7 +190,7 @@ class TetrisBlock:
         if self.time_passed_drop > self.thresh_time_passed_drop:
             self.time_passed_drop = 0
 
-            if not self.is_blocked(array, self.x_grid, self.y_grid - 1):
+            if not self.is_blocked(array, self.x_grid, self.y_grid - 1, self.rotation):
                 self.y_grid = self.check_y_grid(self.y_grid - 1)
             else:
                 self.is_active = False
@@ -199,14 +200,15 @@ class TetrisBlock:
 
         if self.time_passed_input > self.thresh_time_passed_input:
             self.time_passed_input = 0
-            if not self.is_blocked(array_world, self.x_grid + self.move_x_grid, self.y_grid):
+            if not self.is_blocked(array_world, self.x_grid + self.move_x_grid, self.y_grid, self.rotation_pending):
                 self.x_grid += self.move_x_grid
+                self.rotation = self.rotation_pending
 
             self.move_x_grid = 0
             self.move_y_grid = 0
 
-            self.x_grid = self.check_x_grid(self.x_grid)
-            self.y_grid = self.check_y_grid(self.y_grid)
+        self.x_grid = self.check_x_grid(self.x_grid)
+        self.y_grid = self.check_y_grid(self.y_grid)
 
     def update(self, array, delta_time):
         if self.is_active:
@@ -230,16 +232,19 @@ class TetrisBlock:
         if do_copy:
             array_ = array.copy()
 
-        width = self.array[self.current_rotation].shape[0]
-        height = self.array[self.current_rotation].shape[1]
+        width = self.array[self.rotation].shape[0]
+        height = self.array[self.rotation].shape[1]
 
-        array_[self.x_grid:self.x_grid + width, self.y_grid:self.y_grid + height] += self.array[self.current_rotation]
+        # try:
+        array_[self.x_grid:self.x_grid + width, self.y_grid:self.y_grid + height] += self.array[self.rotation]
+        # except:
+        #     print("bam")
 
         return array_
 
-    def is_blocked(self, array, x_grid, y_grid):
-        width = self.array[self.current_rotation].shape[0]
-        height = self.array[self.current_rotation].shape[1]
+    def is_blocked(self, array, x_grid, y_grid, rotation):
+        width = self.array[rotation].shape[0]
+        height = self.array[rotation].shape[1]
 
         # check if in scope
         if x_grid < 0:
@@ -251,7 +256,7 @@ class TetrisBlock:
         if y_grid < 0:
             return True
 
-        array_ = array[x_grid:x_grid + width, y_grid:y_grid + height] + self.array[self.current_rotation]
+        array_ = array[x_grid:x_grid + width, y_grid:y_grid + height] + self.array[rotation]
 
         return (array_ > 1).any().any()
 
@@ -263,19 +268,19 @@ class TetrisBlock:
         return y_grid
 
     def check_x_grid(self, x_grid):
-        width = self.array[self.current_rotation].shape[0]
+        width = self.array[self.rotation].shape[0]
 
         if x_grid < 0:
             x_grid = 0
-        elif x_grid + width >= self.size_grid_x:
+        elif x_grid + width > self.size_grid_x:
             x_grid = self.size_grid_x - width
 
         return x_grid
 
     def draw(self):
-        for x in range(len(self.array[self.current_rotation])):
-            for y in range(len(self.array[self.current_rotation][0])):
-                if self.array[self.current_rotation][x][y] != 0:
+        for x in range(len(self.array[self.rotation])):
+            for y in range(len(self.array[self.rotation][0])):
+                if self.array[self.rotation][x][y] != 0:
                     x_world = (x + self.x_grid) * self.image.width
                     y_world = (y + self.y_grid) * self.image.height
                     self.image.center_x = x_world + self.image.width / 2

@@ -190,7 +190,7 @@ class AI(object):
 
         if (explore_probability > exp_exp_tradeoff):
             # Make a random action (exploration)
-            choice = np.random.randint(1, self.num_actions) - 1
+            choice = np.random.randint(0, self.num_actions)
         else:
             print("Prediction")
             # Get action from Q-network (exploitation)
@@ -206,7 +206,7 @@ class AI(object):
 
     def get_action(self, tm):
         # Increase decay_step
-        self.decay_step += 1
+        self.decay_step += 0.001
 
         # Predict the action to take and take it
         # self.current_action, explore_probability = self.predict_action(tm.n_array)
