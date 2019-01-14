@@ -10,9 +10,19 @@ class TetrisManager:
 
     def __init__(self, image, display_x, display_y, **kwargs):
         self.image = image
-        self.size_grid_x = int(display_x / image.width)
-        self.size_grid_y = int(display_y / image.height)
-        self.screen_height = self.size_grid_y * image.height
+
+        if image is not None:
+            self.size_grid_x = int(display_x / image.width)
+            self.size_grid_y = int(display_y / image.height)
+
+            self.screen_height = self.size_grid_y * image.height
+        else:
+            image_height = kwargs.pop('image_height', 21.25)
+
+            self.size_grid_x = int(display_x / kwargs.pop('image_width', 21.25))
+            self.size_grid_y = int(display_y / image_height)
+
+            self.screen_height = self.size_grid_y * image_height
 
         self.n_array = np.zeros((self.size_grid_x, self.size_grid_y))
 
@@ -27,7 +37,8 @@ class TetrisManager:
         return self.block_active.update_grid(self.n_array, do_copy=True)
 
     def create_new_block(self):
-        self.block_active = TetrisBlock(self.image, self.size_grid_x, self.size_grid_y, **self.tetris_block_parameters)
+        self.block_active = TetrisBlock(self.image, self.size_grid_x, self.size_grid_y, self.screen_height,
+                                        **self.tetris_block_parameters)
 
     def draw(self):
         self.block_active.draw();

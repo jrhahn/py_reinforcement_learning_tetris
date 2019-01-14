@@ -124,11 +124,11 @@ class TetrisBlock:
         ])
     ]
 
-    def __init__(self, image, size_grid_x, size_grid_y, **kwargs):
+    def __init__(self, image, size_grid_x, size_grid_y, screen_height, **kwargs):
         self.time_passed_input = 0
         self.time_passed_drop = 0
         self.image = image
-        self.screen_height = size_grid_y * image.height
+        self.screen_height = screen_height
 
         self.size_grid_x = size_grid_x
         self.size_grid_y = size_grid_y
