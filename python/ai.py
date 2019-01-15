@@ -127,7 +127,7 @@ class AI(object):
 
         self.saver = tf.train.Saver()
 
-        self.memory_size = 1000000
+        self.memory_size = 10000
 
         self.memory = Memory(max_size=self.memory_size)
 
@@ -150,6 +150,24 @@ class AI(object):
         # Initialize deque with zero-images one array for each image
         self.stacked_frames = deque([np.zeros(state_size, dtype=np.int) for i in range(self.num_frames_stacked)],
                                     maxlen=2)
+
+    def save(self):
+        save_path = self.saver.save(self.sess, "./models/model.ckpt")
+        print("Model saved to {}".format(save_path))
+
+    #     # Add ops to save and restore all the variables.
+    #     saver = tf.train.Saver()
+    #
+    #     # Later, launch the model, initialize the variables, do some work, and save the
+    #     # variables to disk.
+    #     with tf.Session() as sess:
+    #         sess.run(init_op)
+    #         # Do some work with the model.
+    #         inc_v1.op.run()
+    #         dec_v2.op.run()
+    #         # Save the variables to disk.
+    #         save_path = saver.save(sess, "/tmp/model.ckpt")
+    #         print("Model saved in path: %s" % save_path)
 
     def stack_frames(self, state, is_new_episode):
         # Preprocess frame
@@ -323,9 +341,7 @@ class AI(object):
         # self.writer.flush()
 
         # Save model every 5 episodes
-        # if self.episode % 5 == 0:
-        #     save_path = self.saver.save(sess, "./models/model.ckpt")
-        #     print("Model Saved")
+
 
     # def test(self):
     #     with tf.Session() as sess:

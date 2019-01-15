@@ -30,6 +30,8 @@ class NoDisplayTetris(object):
                                 thresh_time_passed_input=0,
                                 thresh_time_passed_drop=0.001)
 
+        self.cnt_save = 0
+
         self.ai = AI((self.tm.size_grid_x, self.tm.size_grid_y, 2), ArcadeTetris.l_actions, 0.0001)
 
     def update(self, delta_time):
@@ -49,6 +51,14 @@ class NoDisplayTetris(object):
 
         if game_state == self.tm.GAME_STATE_END:
             self.ai.train()
+
+            print("Score: {}".format(self.tm.score))
+
+            if self.cnt_save == 0:
+                self.ai.save()
+                self.cnt_save = 20
+
+            self.cnt_save -= 1
             self.tm = TetrisManager(None, SCREEN_WIDTH, SCREEN_HEIGHT,
                                     thresh_time_passed_input=self.thresh_time_passed_input,
                                     thresh_time_passed_drop=self.thresh_time_passed_drop)
@@ -118,25 +128,27 @@ class ArcadeTetris(arcade.Window):
 
         if game_state == self.tm.GAME_STATE_END:
             self.ai.train()
+            self.ai.save()
             self.tm = TetrisManager(self.image, SCREEN_WIDTH, SCREEN_HEIGHT,
                                     thresh_time_passed_input=self.thresh_time_passed_input,
                                     thresh_time_passed_drop=self.thresh_time_passed_drop)
+
 
 
 def run():
     # Reset the graph
     tf.reset_default_graph()
 
-    # game = ArcadeTetris()
-    # arcade.run()
+    game = ArcadeTetris()
+    arcade.run()
 
-    game = NoDisplayTetris()
+    # game = NoDisplayTetris()
 
-    duration = 0
-    while True:
-        start_time = time.time()
-        game.update(delta_time=duration)
-        duration = time.time() - start_time
+    # duration = 0
+    # while True:
+    #     start_time = time.time()
+    #     game.update(delta_time=duration)
+    #     duration = time.time() - start_time
 
         # print("{}".format(1/float(duration)))
 
