@@ -1,19 +1,12 @@
-import keras
-
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Conv2D, ELU, Flatten, advanced_activations
-
 from collections import deque
 
 import numpy as np
-
 import tensorflow as tf
+
 from tetris_manager import TetrisManager
 
-import pandas as pd
 
-
-class Memory():
+class Memory:
     def __init__(self, max_size):
         self.buffer = deque(maxlen=max_size)
 
@@ -341,7 +334,6 @@ class AI(object):
         # self.writer.flush()
 
         # Save model every 5 episodes
-
 
     # def test(self):
     #     with tf.Session() as sess:

@@ -1,11 +1,8 @@
 import logging
 import random
 
-import matplotlib.pyplot as plt
-
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-import time
 import numpy as np
 
 

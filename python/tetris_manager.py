@@ -1,7 +1,6 @@
 import numpy as np
-from tetris_block import TetrisBlock
 
-import matplotlib.pyplot as plt
+from tetris_block import TetrisBlock
 
 
 class TetrisManager:
@@ -71,7 +70,7 @@ class TetrisManager:
         for y in range(self.size_grid_y):
             is_complete = (self.n_array[:, y] > 0).all()
 
-            self.score += self.n_array[:, y].sum() * (self.size_grid_y-y) / float(self.size_grid_y)
+            self.score += self.n_array[:, y].sum() * (self.size_grid_y - y) / float(self.size_grid_y)
 
             if is_complete:
                 self.score += 1000

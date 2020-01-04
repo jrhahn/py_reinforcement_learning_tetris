@@ -1,10 +1,8 @@
-import pandas as pd
 import arcade
-import tetris_block
-from tetris_manager import TetrisManager
 import tensorflow as tf
 
 from ai import AI
+from tetris_manager import TetrisManager
 
 SCREEN_WIDTH = 320
 SCREEN_HEIGHT = 480
@@ -134,7 +132,6 @@ class ArcadeTetris(arcade.Window):
                                     thresh_time_passed_drop=self.thresh_time_passed_drop)
 
 
-
 def run():
     # Reset the graph
     tf.reset_default_graph()
@@ -144,11 +141,11 @@ def run():
 
     # game = NoDisplayTetris()
 
-    # duration = 0
-    # while True:
-    #     start_time = time.time()
-    #     game.update(delta_time=duration)
-    #     duration = time.time() - start_time
+    duration = 0
+    while True:
+        start_time = time.time()
+        game.update(delta_time=duration)
+        duration = time.time() - start_time
 
         # print("{}".format(1/float(duration)))
 
