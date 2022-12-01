@@ -1,7 +1,8 @@
 import arcade
+import numpy as np
 
-from ai import AI
 from data_types.game_state import GameState
+from learning.ai import AI
 from tetris_manager import TetrisManager
 
 
@@ -40,11 +41,13 @@ class ArcadeTetris(arcade.Window):
             thresh_time_passed_drop=self._thresh_time_passed_drop,
         )
 
-        # self._ai = AI(
-        #     state_size=(self._tm.size_grid_x, self._tm.size_grid_y, 2),
-        #     actions=ArcadeTetris.actions,
-        #     learning_rate=0.0001,
-        # )
+        self._ai = AI(
+            state_size=(self._tm.size_grid_x, self._tm.size_grid_y, 2),
+            actions=ArcadeTetris.actions,
+            learning_rate=0.0001,
+        )
+
+        self._prev_state = None
 
     def on_draw(self):
         if self._do_draw:
@@ -79,8 +82,21 @@ class ArcadeTetris(arcade.Window):
 
             # self._ai.set_reward(self._tm, game_state, self._tm.score)
 
+        if self._prev_state is None:
+            self._prev_state = self._tm.state
+
+        self._ai.stack_frames(
+            state=np.stack(
+                (self._prev_state,
+                 self._tm.state), axis=2
+            ),
+            is_new_episode=game_state == GameState.Start
+        )
+
+        self._prev_state = self._tm.state
+
         if game_state == GameState.End:
-            # self._ai.train()
+            self._ai.train()
             # self._ai.save()
             self._tm = TetrisManager(
                 image=self._image,

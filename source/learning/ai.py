@@ -1,48 +1,31 @@
+import logging
 from collections import deque
-from typing import List, Tuple
+from typing import List, Tuple, Deque
 
 import numpy as np
-from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Embedding, Dense, Reshape
+from tensorflow.python.keras.layers import Embedding, Reshape, Dense
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.optimizer_v2.adam import Adam
+from tensorflow.python.keras.optimizer_v2.optimizer_v2 import OptimizerV2
 
-from tetris_manager import TetrisManager
+from data_types.game_state import GameState
+from learning.memory import Memory
 
-
-class Memory:
-    def __init__(self, max_size):
-        self.buffer = deque(maxlen=max_size)
-
-    def add(self, experience):
-        self.buffer.append(experience)
-
-    def sample(self, batch_size):
-        buffer_size = len(self.buffer)
-        index = np.random.choice(np.arange(buffer_size), size=batch_size, replace=False)
-
-        return [self.buffer[i] for i in index]
+logger = logging.getLogger(__name__)
 
 
-class AI(object):
-    def build_model(self, name="AINetwork"):
+class AI:
 
-        model = Sequential()
-        model.add(Embedding(self._state_size, 10, input_length=1))
-        model.add(Reshape((10,)))
-        model.add(Dense(50, activation="relu"))
-        model.add(Dense(50, activation="relu"))
-        model.add(Dense(len(self._actions), activation="linear"))
-
-        model.compile(loss="mse", optimizer=self._optimizer)
-        return model
-
-    def __init__(self, state_size: Tuple, actions:  List, learning_rate: float, name: str="DQNetwork", ):
+    def __init__(self, state_size: Tuple, actions: List, learning_rate: float, name: str = "DQNetwork", ):
         self._state_size = state_size
 
         self._actions = actions
         self._num_actions = len(actions)
-        self._earning_rate = learning_rate
+        # self._earning_rate = learning_rate
 
-        self.build_model()
+        self._build_model(
+            optimizer=Adam(lr=learning_rate)
+        )
 
         # todo here
         # self.sess = tf.Session()
@@ -74,14 +57,28 @@ class AI(object):
 
         self.num_frames_stacked = 2
 
+        self._prev_state = None
+
         # Initialize deque with zero-images one array for each image
-        self.stacked_frames = deque(
-            [
-                np.zeros(state_size, dtype=np.int)
-                for i in range(self.num_frames_stacked)
-            ],
+        self.stacked_frames = self._init_stack(state_size=state_size, )
+
+    def _init_stack(self, state_size: Tuple) -> Deque:
+        return deque(
+            [np.zeros(state_size, dtype=np.int)] * self.num_frames_stacked,
             maxlen=2,
         )
+
+    def _build_model(self, optimizer: OptimizerV2, name="AINetwork"):
+
+        model = Sequential()
+        model.add(Embedding(input_dim=np.prod(self._state_size), output_dim=10, input_length=1))
+        model.add(Reshape((10,)))
+        model.add(Dense(50, activation="relu"))
+        model.add(Dense(50, activation="relu"))
+        model.add(Dense(len(self._actions), activation="linear"))
+
+        model.compile(loss="mse", optimizer=optimizer)
+        return model
 
     def save(self):
         # save_path = self.saver.save(self.sess, "./models/model.ckpt")
@@ -102,26 +99,18 @@ class AI(object):
     #         save_path = saver.save(sess, "/tmp/model.ckpt")
     #         print("Model saved in path: %s" % save_path)
 
-    def stack_frames(self, state, is_new_episode):
+    def stack_frames(self, state: np.array, is_new_episode: bool, ) -> np.array:
         # Preprocess frame
         # frame = preprocess_frame(state)
         frame = state
 
         if is_new_episode:
             # Clear our stacked_frames
-            self.stacked_frames = deque(
-                [
-                    np.zeros(self.state_size, dtype=np.int)
-                    for i in range(self.num_frames_stacked)
-                ],
-                maxlen=2,
-            )
+            self.stacked_frames = self._init_stack(state_size=self._state_size)
 
             # Because we're in a new episode, copy the same frame 4x
-            self.stacked_frames.append(frame)
-            self.stacked_frames.append(frame)
-            # stacked_frames.append(frame)
-            # stacked_frames.append(frame)
+            for ii in range(self.num_frames_stacked):
+                self.stacked_frames.append(frame)
 
         else:
             # Append frame to deque, automatically removes the oldest frame
@@ -142,32 +131,40 @@ class AI(object):
 
         # Here we'll use an improved version of our epsilon greedy strategy used in Q-learning notebook
         # explore_probability = explore_stop + (explore_start - explore_stop) * np.exp(-decay_rate * decay_step)
-        explore_probability = np.exp(-self.decay_rate * self.decay_step)
+        explore_probability = np.exp(-self.decay_rate * self._decay_step)
 
         if explore_probability > exp_exp_tradeoff:
             # Make a random action (exploration)
-            choice = np.random.randint(0, self.num_actions)
+            choice = np.random.randint(0, self._num_actions)
         else:
             print("Prediction")
             # Get action from Q-network (exploitation)
             # Estimate the Qs values state
             # Qs = self.sess.run(self.output, feed_dict={self.inputs: state.reshape((1, *state.shape))})
-            q_values = self.q_network.predict(state)
+            q_values = self._q_network.predict(state)
 
             # Take the biggest Q value (= the best action)
             choice = np.argmax(q_values)
 
-        self.current_action = self.l_actions[choice]
+        self.current_action = self._actions[choice]
 
         return self.current_action  # , explore_probability
 
     def get_action(self, tm):
         # Increase decay_step
-        self.decay_step += 0.001
+        self._decay_step += 0.001
 
         # Predict the action to take and take it
         # self.current_action, explore_probability = self.predict_action(tm.n_array)
-        self.current_state = self.stack_frames(tm.get_state(), True)
+
+        current = tm.state
+        if self._prev_state is None:
+            self._prev_state = current
+
+        state = np.stack((self._prev_state, current), axis=2)
+        self._prev_state = current
+
+        self.current_state = self.stack_frames(state, True)
         self.current_action = self.predict_action(self.current_state)
 
         return self.current_action
@@ -178,14 +175,21 @@ class AI(object):
 
         self.current_step -= 1
 
-        next_state = self.stack_frames(tm.get_state(), False)
+        current = tm.state
+        if self._prev_state is None:
+            self._prev_state = current
+
+        state = np.stack((self._prev_state, current), axis=2)
+        self._prev_state = current
+
+        next_state = self.stack_frames(state, False)
 
         # If the game is finished
-        if game_state == TetrisManager.GAME_STATE_END or self.current_step == 0:
+        if game_state == GameState.End or self.current_step == 0:
 
             print("ADD MEMORY")
             # The episode ends so no next state
-            next_state = np.zeros(self.state_size[:-1], dtype=np.int)
+            next_state = np.zeros(self._state_size[:-1], dtype=np.int)
 
             next_state = self.stack_frames(next_state, False)
 
@@ -205,14 +209,14 @@ class AI(object):
             self.l_rewards.append((self.episode, total_reward))
 
             # Store transition <st,at,rt+1,st+1> in memory D
-            self.memory.add((next_state, self.current_action, reward, next_state, True))
+            self._memory.add((next_state, self.current_action, reward, next_state, True))
 
         else:
             # Stack the frame of the next_state
             # next_state, stacked_frames = stack_frames(stacked_frames, next_state, False)
 
             # Add experience to memory
-            self.memory.add(
+            self._memory.add(
                 (self.current_state, self.current_action, reward, next_state, False)
             )
 
@@ -223,21 +227,26 @@ class AI(object):
         return tm.block_active.type, tm.block_active.x_grid, tm.block_active.y_grid
 
     def actions_to_one_hot(self, l_data):
-        d_actions_inv = {k: v for v, k in enumerate(self.l_actions)}
+        d_actions_inv = {k: v for v, k in enumerate(self._actions)}
 
-        n_vecs = np.eye(len(self.l_actions))
+        n_vecs = np.eye(len(self._actions))
 
         l_actions_cat = [n_vecs[d_actions_inv[d], :] for d in l_data]
 
         return np.vstack(l_actions_cat)
 
-    def train(self):
-        print("Training")
+    def train(self) -> None:
+        logger.info("Training")
 
         # todo add memory
-        ### LEARNING PART
         # Obtain random mini-batch from memory
-        batch = self.memory.sample(self.batch_size)
+
+        if self._memory.empty:
+            return
+
+        batch = self._memory.sample(self.batch_size)
+
+        return
         states_mb = np.array([each[0] for each in batch], ndmin=3)
         actions_mb = np.array([each[1] for each in batch])
         rewards_mb = np.array([each[2] for each in batch])
@@ -248,7 +257,7 @@ class AI(object):
         target_Qs_batch = []
 
         # Get Q values for next_state
-        # Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs_: next_states_mb})
+        Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs_: next_states_mb})
         # Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs: states_mb})
 
         # Set Q_target = r if the episode ends at s+1, otherwise set Q_target = r + gamma*maxQ(s', a')
@@ -260,9 +269,8 @@ class AI(object):
                 target_Qs_batch.append(rewards_mb[i])
 
             else:
-                # target = rewards_mb[i] + self.gamma * np.max(Qs_next_state[i])
-                # target_Qs_batch.append(target)
-                pass
+                target = rewards_mb[i] + self.gamma * np.max(Qs_next_state[i])
+                target_Qs_batch.append(target)
 
         targets_mb = np.array([each for each in target_Qs_batch])
 
@@ -270,17 +278,17 @@ class AI(object):
 
         l_actions_cat = self.actions_to_one_hot(actions_mb)
 
-        # loss, _ = self.sess.run([self.loss, self.optimizer],
-        # feed_dict={self.inputs: states_mb,
-        #            self.target_Q: targets_mb,
-        #            self.actions: l_actions_cat})
+        loss, _ = self.sess.run([self.loss, self.optimizer],
+                                feed_dict={self.inputs: states_mb,
+                                           self.target_Q: targets_mb,
+                                           self.actions: l_actions_cat})
 
         # Write TF Summaries
-        # summary = sess.run(self.write_op, feed_dict={self.inputs_: states_mb,
-        #                                         self.target_Q: targets_mb,
-        #                                         self.actions_: actions_mb})
-        # self.writer.add_summary(summary, self.episode)
-        # self.writer.flush()
+        summary = sess.run(self.write_op, feed_dict={self.inputs_: states_mb,
+                                                     self.target_Q: targets_mb,
+                                                     self.actions_: actions_mb})
+        self.writer.add_summary(summary, self.episode)
+        self.writer.flush()
 
         # Save model every 5 episodes
 
@@ -326,7 +334,6 @@ class AI(object):
     #                 state = next_state
     #
     #         env.close()
-
 
 # Instantiate the DQNetwork
 # DQNetwork = DQNetwork(state_size, action_size, learning_rate)

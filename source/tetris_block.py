@@ -1,4 +1,5 @@
 import logging
+from typing import Dict
 
 import numpy as np
 
@@ -49,7 +50,15 @@ class TetrisBlock:
     Z_array = [np.array([[1, 1, 0], [0, 1, 1]]), np.array([[0, 1], [1, 1], [1, 0]])]
     S_array = [np.array([[0, 1, 1], [1, 1, 0]]), np.array([[1, 0], [1, 1], [0, 1]])]
 
-    def __init__(self, image, size_grid_x, size_grid_y, screen_height, **kwargs):
+    def __init__(
+            self,
+            image,
+            size_grid_x: int,
+            size_grid_y: int,
+            screen_height: int,
+            **kwargs: Dict,
+    ) -> None:
+
         self.time_passed_input = 0
         self.time_passed_drop = 0
         self.image = image
@@ -103,24 +112,24 @@ class TetrisBlock:
         self.x_grid = np.random.randint(0, size_grid_x - width)
         self.y_grid = self.size_grid_y - height - 1
 
-    def rotate(self):
+    def rotate(self) -> None:
         self.rotation_pending += 1
 
         if self.rotation_pending >= len(self.array):
             self.rotation_pending = 0
 
-    def drop(self, array, delta_time):
+    def drop(self, array: np.array, delta_time: float) -> None:
         self.time_passed_drop += delta_time
 
         if self.time_passed_drop > self.thresh_time_passed_drop:
             self.time_passed_drop = 0
 
             if not self.is_blocked(array, self.x_grid, self.y_grid - 1, self.rotation):
-                self.y_grid = self.check_y_grid(self.y_grid - 1)
+                self.y_grid = self.coerce_y_grid(self.y_grid - 1)
             else:
                 self.is_active = False
 
-    def process_input(self, array_world, delta_time):
+    def process_input(self, array_world: np.array, delta_time: float) -> None:
         self.time_passed_input += delta_time
 
         if self.time_passed_input > self.thresh_time_passed_input:
@@ -137,10 +146,10 @@ class TetrisBlock:
             self.move_x_grid = 0
             self.move_y_grid = 0
 
-        self.x_grid = self.check_x_grid(self.x_grid)
-        self.y_grid = self.check_y_grid(self.y_grid)
+        self.x_grid = self.coerce_x_grid(self.x_grid)
+        self.y_grid = self.coerce_y_grid(self.y_grid)
 
-    def update(self, array, delta_time):
+    def update(self, array: np.array, delta_time: float) -> np.array:
         if self.is_active:
             self.drop(array, delta_time)
 
@@ -155,7 +164,7 @@ class TetrisBlock:
 
         return array
 
-    def update_grid(self, array, do_copy=False):
+    def update_grid(self, array: np.array, do_copy=False) -> np.array:
         """Write current block to world grid"""
         array_ = array
 
@@ -166,15 +175,13 @@ class TetrisBlock:
         height = self.array[self.rotation].shape[1]
 
         # try:
-        array_[
-        self.x_grid: self.x_grid + width, self.y_grid: self.y_grid + height
-        ] += self.array[self.rotation]
+        array_[self.x_grid: self.x_grid + width, self.y_grid: self.y_grid + height] += self.array[self.rotation]
         # except:
         #     print("bam")
 
         return array_
 
-    def is_blocked(self, array, x_grid, y_grid, rotation):
+    def is_blocked(self, array: np.array, x_grid: int, y_grid: int, rotation: int, ) -> bool:
         width = self.array[rotation].shape[0]
         height = self.array[rotation].shape[1]
 
@@ -195,24 +202,19 @@ class TetrisBlock:
 
         return (array_ > 1).any().any()
 
-    def check_y_grid(self, y_grid):
+    def coerce_y_grid(self, y_grid: int) -> int:
         if y_grid < 0:
             y_grid = 0
             self.is_active = False
 
         return y_grid
 
-    def check_x_grid(self, x_grid):
+    def coerce_x_grid(self, x_grid: int) -> int:
         width = self.array[self.rotation].shape[0]
 
-        if x_grid < 0:
-            x_grid = 0
-        elif x_grid + width > self.size_grid_x:
-            x_grid = self.size_grid_x - width
+        return min(max(0, x_grid), self.size_grid_x - width)
 
-        return x_grid
-
-    def draw(self):
+    def draw(self) -> None:
         for x in range(len(self.array[self.rotation])):
             for y in range(len(self.array[self.rotation][0])):
                 if self.array[self.rotation][x][y] != 0:
@@ -225,12 +227,14 @@ class TetrisBlock:
         self.x_world = int(self.x_grid * self.image.width)
         self.y_world = int(self.y_grid * self.image.height)
 
-    def set_moving_vector(self, move_x_grid, move_y_grid):
+    def set_moving_vector(self, move_x_grid: int, move_y_grid: int, ) -> None:
         self.move_x_grid = move_x_grid
         self.move_y_grid = move_y_grid
 
-    def get_x(self):
+    @property
+    def x(self) -> int:
         return self.x_world
 
-    def get_y(self):
+    @property
+    def y(self) -> int:
         return self.y_world
