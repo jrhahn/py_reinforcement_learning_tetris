@@ -1,2 +1,4 @@
+arcade
 numpy
+pre-commit
 tensorflow

@@ -1,125 +1,53 @@
 import logging
-import random
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
 import numpy as np
 
+from data_types.block_type import BlockType
 
-class BlockType:
-    TypeL = 'typel'
-    TypeLinv = 'typelinv'
-    TypeBlock = 'typeblock'
-    TypeTriangle = 'typetriangle'
-    TypeBar = 'typebar'
-    TypeZ = 'typez'
-    TypeS = 'types'
-
-    l_types = [TypeL, TypeBar, TypeBlock, TypeLinv, TypeS, TypeZ, TypeTriangle]
-
-    @staticmethod
-    def random():
-        return BlockType.l_types[random.randint(0, len(BlockType.l_types) - 1)]
+logger = logging.getLogger(__name__)
 
 
 class TetrisBlock:
     L_array = [
-        np.array([
-            [1, 0],
-            [1, 0],
-            [1, 1]
-        ]),
-        np.array([
-            [1, 1, 1],
-            [1, 0, 0]
-        ]),
-        np.array([
-            [1, 1],
-            [0, 1],
-            [0, 1]
-        ]),
-        np.array([
-            [0, 0, 1],
-            [1, 1, 1],
-        ])]
+        np.array([[1, 0], [1, 0], [1, 1]]),
+        np.array([[1, 1, 1], [1, 0, 0]]),
+        np.array([[1, 1], [0, 1], [0, 1]]),
+        np.array(
+            [
+                [0, 0, 1],
+                [1, 1, 1],
+            ]
+        ),
+    ]
     L_inv_array = [
-        np.array([
-            [0, 1],
-            [0, 1],
-            [1, 1]
-        ]),
-        np.array([
-            [1, 0, 0],
-            [1, 1, 1],
-        ]),
-        np.array([
-            [1, 1],
-            [1, 0],
-            [1, 0]
-        ]),
-        np.array([
-            [1, 1, 1],
-            [0, 0, 1]
-        ])
+        np.array([[0, 1], [0, 1], [1, 1]]),
+        np.array(
+            [
+                [1, 0, 0],
+                [1, 1, 1],
+            ]
+        ),
+        np.array([[1, 1], [1, 0], [1, 0]]),
+        np.array([[1, 1, 1], [0, 0, 1]]),
     ]
     Triangle_array = [
-        np.array([
-            [0, 1, 0],
-            [1, 1, 1],
-        ]),
-        np.array([
-            [1, 0],
-            [1, 1],
-            [1, 0]
-        ]),
-        np.array([
-            [1, 1, 1],
-            [0, 1, 0]
-        ]),
-        np.array([
-            [0, 1, 0],
-            [1, 1, 0],
-            [0, 1, 0]
-        ])
+        np.array(
+            [
+                [0, 1, 0],
+                [1, 1, 1],
+            ]
+        ),
+        np.array([[1, 0], [1, 1], [1, 0]]),
+        np.array([[1, 1, 1], [0, 1, 0]]),
+        np.array([[0, 1, 0], [1, 1, 0], [0, 1, 0]]),
     ]
-    Block_array = [
-        np.array([
-            [1, 1],
-            [1, 1]])
-    ]
+    Block_array = [np.array([[1, 1], [1, 1]])]
     Bar_array = [
-        np.array([
-            [1, 1, 1, 1]
-        ]),
-        np.array([
-            [1],
-            [1],
-            [1],
-            [1]
-        ]),
+        np.array([[1, 1, 1, 1]]),
+        np.array([[1], [1], [1], [1]]),
     ]
-    Z_array = [
-        np.array([
-            [1, 1, 0],
-            [0, 1, 1]
-        ]),
-        np.array([
-            [0, 1],
-            [1, 1],
-            [1, 0]
-        ])
-    ]
-    S_array = [
-        np.array([
-            [0, 1, 1],
-            [1, 1, 0]
-        ]),
-        np.array([
-            [1, 0],
-            [1, 1],
-            [0, 1]
-        ])
-    ]
+    Z_array = [np.array([[1, 1, 0], [0, 1, 1]]), np.array([[0, 1], [1, 1], [1, 0]])]
+    S_array = [np.array([[0, 1, 1], [1, 1, 0]]), np.array([[1, 0], [1, 1], [0, 1]])]
 
     def __init__(self, image, size_grid_x, size_grid_y, screen_height, **kwargs):
         self.time_passed_input = 0
@@ -147,8 +75,8 @@ class TetrisBlock:
         self.rotation = 0
         self.rotation_pending = 0
 
-        self.thresh_time_passed_input = kwargs.pop('thresh_time_passed_input', 0.03)
-        self.thresh_time_passed_drop = kwargs.pop('thresh_time_passed_drop', .3)
+        self.thresh_time_passed_input = kwargs.pop("thresh_time_passed_input", 0.03)
+        self.thresh_time_passed_drop = kwargs.pop("thresh_time_passed_drop", 0.3)
 
         if BlockType.TypeL == self.type:
             self.array = self.L_array
@@ -197,7 +125,12 @@ class TetrisBlock:
 
         if self.time_passed_input > self.thresh_time_passed_input:
             self.time_passed_input = 0
-            if not self.is_blocked(array_world, self.x_grid + self.move_x_grid, self.y_grid, self.rotation_pending):
+            if not self.is_blocked(
+                    array_world,
+                    self.x_grid + self.move_x_grid,
+                    self.y_grid,
+                    self.rotation_pending,
+            ):
                 self.x_grid += self.move_x_grid
                 self.rotation = self.rotation_pending
 
@@ -233,7 +166,9 @@ class TetrisBlock:
         height = self.array[self.rotation].shape[1]
 
         # try:
-        array_[self.x_grid:self.x_grid + width, self.y_grid:self.y_grid + height] += self.array[self.rotation]
+        array_[
+        self.x_grid: self.x_grid + width, self.y_grid: self.y_grid + height
+        ] += self.array[self.rotation]
         # except:
         #     print("bam")
 
@@ -253,7 +188,10 @@ class TetrisBlock:
         if y_grid < 0:
             return True
 
-        array_ = array[x_grid:x_grid + width, y_grid:y_grid + height] + self.array[rotation]
+        array_ = (
+                array[x_grid: x_grid + width, y_grid: y_grid + height]
+                + self.array[rotation]
+        )
 
         return (array_ > 1).any().any()
 
@@ -287,7 +225,7 @@ class TetrisBlock:
         self.x_world = int(self.x_grid * self.image.width)
         self.y_world = int(self.y_grid * self.image.height)
 
-    def setMovingVector(self, move_x_grid, move_y_grid):
+    def set_moving_vector(self, move_x_grid, move_y_grid):
         self.move_x_grid = move_x_grid
         self.move_y_grid = move_y_grid
 

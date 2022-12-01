@@ -1,7 +1,9 @@
 from collections import deque
+from typing import List, Tuple
 
 import numpy as np
-import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Embedding, Dense, Reshape
 
 from tetris_manager import TetrisManager
 
@@ -21,108 +23,40 @@ class Memory:
 
 
 class AI(object):
-
     def build_model(self, name="AINetwork"):
-        with tf.variable_scope(name):
-            # We create the placeholders
-            # *state_size means that we take each elements of state_size in tuple hence is like if we wrote
-            # [None, 84, 84, 4]
-            self.inputs = tf.placeholder(tf.float32, [None, *self.state_size], name="state_grid")
-            self.actions = tf.placeholder(tf.float32, [None, self.num_actions], name="actions_")
 
-            # Remember that target_Q is the R(s,a) + ymax Qhat(s', a')
-            self.target_Q = tf.placeholder(tf.float32, [None], name="target")
-            """
-                       First convnet:
-                       CNN
-                       ELU
-                       """
-            # # Input is 110x84x4
-            # self.conv1 = tf.layers.conv2d(inputs=self.inputs_,
-            #                               filters=32,
-            #                               kernel_size=[8, 8],
-            #                               strides=[4, 4],
-            #                               padding="VALID",
-            #                               kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
-            #                               name="conv1")
-            #
-            # self.conv1_out = tf.nn.elu(self.conv1, name="conv1_out")
+        model = Sequential()
+        model.add(Embedding(self._state_size, 10, input_length=1))
+        model.add(Reshape((10,)))
+        model.add(Dense(50, activation="relu"))
+        model.add(Dense(50, activation="relu"))
+        model.add(Dense(len(self._actions), activation="linear"))
 
-            """
-            Second convnet:
-            CNN
-            ELU
-            """
-            self.conv2 = tf.layers.conv2d(inputs=self.inputs,
-                                          # self.conv2 = tf.layers.conv2d(inputs=self.conv1_out,
-                                          filters=64,
-                                          kernel_size=[4, 4],
-                                          strides=[2, 2],
-                                          padding="VALID",
-                                          kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
-                                          name="conv2")
+        model.compile(loss="mse", optimizer=self._optimizer)
+        return model
 
-            self.conv2_out = tf.nn.elu(self.conv2, name="conv2_out")
+    def __init__(self, state_size: Tuple, actions:  List, learning_rate: float, name: str="DQNetwork", ):
+        self._state_size = state_size
 
-            """
-            Third convnet:
-            CNN
-            ELU
-            """
-            self.conv3 = tf.layers.conv2d(inputs=self.conv2_out,
-                                          filters=64,
-                                          kernel_size=[3, 3],
-                                          strides=[2, 2],
-                                          padding="VALID",
-                                          kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
-                                          name="conv3")
-
-            self.conv3_out = tf.nn.elu(self.conv3, name="conv3_out")
-
-            self.flatten = tf.contrib.layers.flatten(self.conv3_out)
-
-            self.fc = tf.layers.dense(inputs=self.flatten,
-                                      units=512,
-                                      activation=tf.nn.elu,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                      name="fc1")
-
-            self.output = tf.layers.dense(inputs=self.fc,
-                                          kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                          units=self.num_actions,
-                                          activation=None)
-
-            # Q is our predicted Q value.
-            self.Q = tf.reduce_sum(tf.multiply(self.output, self.actions))
-
-            # The loss is the difference between our predicted Q_values and the Q_target
-            # Sum(Qtarget - Q)^2
-            self.loss = tf.reduce_mean(tf.square(self.target_Q - self.Q))
-
-            self.optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
-
-    def __init__(self, state_size, l_actions, learning_rate, name='DQNetwork'):
-        self.state_size = state_size
-
-        self.l_actions = l_actions
-        self.num_actions = len(l_actions)
-        self.learning_rate = learning_rate
+        self._actions = actions
+        self._num_actions = len(actions)
+        self._earning_rate = learning_rate
 
         self.build_model()
 
         # todo here
-        self.sess = tf.Session()
+        # self.sess = tf.Session()
         # Initialize the variables
-        self.sess.run(tf.global_variables_initializer())
+        # self.sess.run(tf.global_variables_initializer())
 
         # Initialize the decay rate (that will use to reduce epsilon)
-        self.decay_step = 0
+        self._decay_step = 0
 
-        self.saver = tf.train.Saver()
+        # self.saver = tf.train.Saver()
 
-        self.memory_size = 10000
+        self._memory_size = 10000
 
-        self.memory = Memory(max_size=self.memory_size)
+        self._memory = Memory(max_size=self._memory_size)
 
         self.current_step = 0
         self.current_action = 0
@@ -141,12 +75,18 @@ class AI(object):
         self.num_frames_stacked = 2
 
         # Initialize deque with zero-images one array for each image
-        self.stacked_frames = deque([np.zeros(state_size, dtype=np.int) for i in range(self.num_frames_stacked)],
-                                    maxlen=2)
+        self.stacked_frames = deque(
+            [
+                np.zeros(state_size, dtype=np.int)
+                for i in range(self.num_frames_stacked)
+            ],
+            maxlen=2,
+        )
 
     def save(self):
-        save_path = self.saver.save(self.sess, "./models/model.ckpt")
-        print("Model saved to {}".format(save_path))
+        # save_path = self.saver.save(self.sess, "./models/model.ckpt")
+        # print("Model saved to {}".format(save_path))
+        pass
 
     #     # Add ops to save and restore all the variables.
     #     saver = tf.train.Saver()
@@ -170,7 +110,12 @@ class AI(object):
         if is_new_episode:
             # Clear our stacked_frames
             self.stacked_frames = deque(
-                [np.zeros(self.state_size, dtype=np.int) for i in range(self.num_frames_stacked)], maxlen=2)
+                [
+                    np.zeros(self.state_size, dtype=np.int)
+                    for i in range(self.num_frames_stacked)
+                ],
+                maxlen=2,
+            )
 
             # Because we're in a new episode, copy the same frame 4x
             self.stacked_frames.append(frame)
@@ -199,17 +144,18 @@ class AI(object):
         # explore_probability = explore_stop + (explore_start - explore_stop) * np.exp(-decay_rate * decay_step)
         explore_probability = np.exp(-self.decay_rate * self.decay_step)
 
-        if (explore_probability > exp_exp_tradeoff):
+        if explore_probability > exp_exp_tradeoff:
             # Make a random action (exploration)
             choice = np.random.randint(0, self.num_actions)
         else:
             print("Prediction")
             # Get action from Q-network (exploitation)
             # Estimate the Qs values state
-            Qs = self.sess.run(self.output, feed_dict={self.inputs: state.reshape((1, *state.shape))})
+            # Qs = self.sess.run(self.output, feed_dict={self.inputs: state.reshape((1, *state.shape))})
+            q_values = self.q_network.predict(state)
 
             # Take the biggest Q value (= the best action)
-            choice = np.argmax(Qs)
+            choice = np.argmax(q_values)
 
         self.current_action = self.l_actions[choice]
 
@@ -266,7 +212,9 @@ class AI(object):
             # next_state, stacked_frames = stack_frames(stacked_frames, next_state, False)
 
             # Add experience to memory
-            self.memory.add((self.current_state, self.current_action, reward, next_state, False))
+            self.memory.add(
+                (self.current_state, self.current_action, reward, next_state, False)
+            )
 
             # st+1 is now our current state
             # state = next_state
@@ -301,7 +249,7 @@ class AI(object):
 
         # Get Q values for next_state
         # Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs_: next_states_mb})
-        Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs: states_mb})
+        # Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs: states_mb})
 
         # Set Q_target = r if the episode ends at s+1, otherwise set Q_target = r + gamma*maxQ(s', a')
         for i in range(0, len(batch)):
@@ -312,8 +260,9 @@ class AI(object):
                 target_Qs_batch.append(rewards_mb[i])
 
             else:
-                target = rewards_mb[i] + self.gamma * np.max(Qs_next_state[i])
-                target_Qs_batch.append(target)
+                # target = rewards_mb[i] + self.gamma * np.max(Qs_next_state[i])
+                # target_Qs_batch.append(target)
+                pass
 
         targets_mb = np.array([each for each in target_Qs_batch])
 
@@ -321,10 +270,10 @@ class AI(object):
 
         l_actions_cat = self.actions_to_one_hot(actions_mb)
 
-        loss, _ = self.sess.run([self.loss, self.optimizer],
-                                feed_dict={self.inputs: states_mb,
-                                           self.target_Q: targets_mb,
-                                           self.actions: l_actions_cat})
+        # loss, _ = self.sess.run([self.loss, self.optimizer],
+        # feed_dict={self.inputs: states_mb,
+        #            self.target_Q: targets_mb,
+        #            self.actions: l_actions_cat})
 
         # Write TF Summaries
         # summary = sess.run(self.write_op, feed_dict={self.inputs_: states_mb,
@@ -377,6 +326,7 @@ class AI(object):
     #                 state = next_state
     #
     #         env.close()
+
 
 # Instantiate the DQNetwork
 # DQNetwork = DQNetwork(state_size, action_size, learning_rate)
