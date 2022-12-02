@@ -10,6 +10,7 @@ from tensorflow.python.keras.optimizer_v2.optimizer_v2 import OptimizerV2
 
 from data_types.game_state import GameState
 from learning.memory import Memory
+from tetris_manager import TetrisManager
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ class AI:
     #         save_path = saver.save(sess, "/tmp/model.ckpt")
     #         print("Model saved in path: %s" % save_path)
 
-    def stack_frames(self, state: np.array, is_new_episode: bool, ) -> np.array:
+    def _stack_frames(self, state: np.array, is_new_episode: bool, ) -> np.array:
         # Preprocess frame
         # frame = preprocess_frame(state)
         frame = state
@@ -137,7 +138,7 @@ class AI:
             # Make a random action (exploration)
             choice = np.random.randint(0, self._num_actions)
         else:
-            print("Prediction")
+            logger.info("Prediction")
             # Get action from Q-network (exploitation)
             # Estimate the Qs values state
             # Qs = self.sess.run(self.output, feed_dict={self.inputs: state.reshape((1, *state.shape))})
@@ -150,7 +151,7 @@ class AI:
 
         return self.current_action  # , explore_probability
 
-    def get_action(self, tm):
+    def get_action(self, tm: TetrisManager) -> int:
         # Increase decay_step
         self._decay_step += 0.001
 
@@ -169,7 +170,7 @@ class AI:
 
         return self.current_action
 
-    def set_reward(self, tm, game_state, reward):
+    def set_reward(self, tm: TetrisManager, game_state: GameState, reward: float) -> None:
         # Add the reward to total reward
         self.l_episode_rewards.append(reward)
 
@@ -182,16 +183,16 @@ class AI:
         state = np.stack((self._prev_state, current), axis=2)
         self._prev_state = current
 
-        next_state = self.stack_frames(state, False)
+        next_state = self._stack_frames(state, False)
 
         # If the game is finished
         if game_state == GameState.End or self.current_step == 0:
 
-            print("ADD MEMORY")
+            logger.info("ADD MEMORY")
             # The episode ends so no next state
             next_state = np.zeros(self._state_size[:-1], dtype=np.int)
 
-            next_state = self.stack_frames(next_state, False)
+            next_state = self._stack_frames(next_state, False)
 
             # Set step = max_steps to end the episode
             self.current_step = self.max_steps
@@ -223,7 +224,7 @@ class AI:
             # st+1 is now our current state
             # state = next_state
 
-    def get_block_state(self, tm):
+    def get_block_state(self, tm: TetrisManager) -> Tuple:
         return tm.block_active.type, tm.block_active.x_grid, tm.block_active.y_grid
 
     def actions_to_one_hot(self, l_data):

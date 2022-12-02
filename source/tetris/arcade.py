@@ -85,13 +85,13 @@ class ArcadeTetris(arcade.Window):
         if self._prev_state is None:
             self._prev_state = self._tm.state
 
-        self._ai.stack_frames(
-            state=np.stack(
-                (self._prev_state,
-                 self._tm.state), axis=2
-            ),
-            is_new_episode=game_state == GameState.Start
-        )
+        # self._ai.stack_frames(
+        #     state=np.stack(
+        #         (self._prev_state,
+        #          self._tm.state), axis=2
+        #     ),
+        #     is_new_episode=game_state == GameState.Start
+        # )
 
         self._prev_state = self._tm.state
 

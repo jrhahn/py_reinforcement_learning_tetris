@@ -73,3 +73,6 @@ class NoDisplayTetris(object):
                 thresh_time_passed_input=self._thresh_time_passed_input,
                 thresh_time_passed_drop=self._thresh_time_passed_drop,
             )
+
+            # debug only
+            self._ai.set_reward(self._tm, game_state, self._tm.score)

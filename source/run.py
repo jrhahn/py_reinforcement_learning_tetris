@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
+import logging
 import time
 
 import arcade
 
 from source.tetris.arcade import ArcadeTetris
+
+logging.basicConfig(level=logging.INFO)
+
 
 
 def run():
