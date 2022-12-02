@@ -47,7 +47,7 @@ class AI:
         self.current_state = None
         self.max_steps = 50000  # todo value?
 
-        self.l_episode_rewards = list()
+        self.episode_rewards = list()
         self.l_rewards = list()
         self.total_episodes = 50
         self.max_steps = 50000
@@ -58,16 +58,18 @@ class AI:
 
         self.num_frames_stacked = 2
 
-        self._prev_state = None
+        # self._prev_state = None
 
         # Initialize deque with zero-images one array for each image
         self.stacked_frames = self._init_stack(state_size=state_size, )
 
     def _init_stack(self, state_size: Tuple) -> Deque:
-        return deque(
-            [np.zeros(state_size, dtype=np.int)] * self.num_frames_stacked,
-            maxlen=2,
-        )
+        d = deque( maxlen=self.num_frames_stacked)
+
+        for ii in range(self.num_frames_stacked):
+            d.append(np.zeros(state_size, dtype=np.int))
+
+        return d
 
     def _build_model(self, optimizer: OptimizerV2, name="AINetwork"):
 
@@ -109,7 +111,6 @@ class AI:
             # Clear our stacked_frames
             self.stacked_frames = self._init_stack(state_size=self._state_size)
 
-            # Because we're in a new episode, copy the same frame 4x
             for ii in range(self.num_frames_stacked):
                 self.stacked_frames.append(frame)
 
@@ -172,27 +173,27 @@ class AI:
 
     def set_reward(self, tm: TetrisManager, game_state: GameState, reward: float) -> None:
         # Add the reward to total reward
-        self.l_episode_rewards.append(reward)
+        self.episode_rewards.append(reward)
 
         self.current_step -= 1
 
-        current = tm.state
-        if self._prev_state is None:
-            self._prev_state = current
+        # current = tm.state
+        # if self._prev_state is None:
+        #     self._prev_state = current
 
-        state = np.stack((self._prev_state, current), axis=2)
-        self._prev_state = current
+        # state = np.stack((self._prev_state, current), axis=2)
+        # self._prev_state = current
 
-        next_state = self._stack_frames(state, False)
+        next_state = self._stack_frames(state=tm.state, is_new_episode=False)
 
         # If the game is finished
         if game_state == GameState.End or self.current_step == 0:
 
             logger.info("ADD MEMORY")
             # The episode ends so no next state
-            next_state = np.zeros(self._state_size[:-1], dtype=np.int)
+            next_state = np.zeros(self._state_size, dtype=np.int)
 
-            next_state = self._stack_frames(next_state, False)
+            next_state = self._stack_frames(state=next_state, is_new_episode=False)
 
             # Set step = max_steps to end the episode
             self.current_step = self.max_steps
@@ -200,7 +201,7 @@ class AI:
             self.episode += 1
 
             # Get the total reward of the episode
-            total_reward = np.sum(self.l_episode_rewards)
+            total_reward = np.sum(self.episode_rewards)
 
             # print('Episode: {}'.format(episode),
             #       'Total reward: {}'.format(total_reward),
@@ -224,7 +225,8 @@ class AI:
             # st+1 is now our current state
             # state = next_state
 
-    def get_block_state(self, tm: TetrisManager) -> Tuple:
+    @staticmethod
+    def get_block_state(tm: TetrisManager) -> Tuple:
         return tm.block_active.type, tm.block_active.x_grid, tm.block_active.y_grid
 
     def actions_to_one_hot(self, l_data):

@@ -42,7 +42,7 @@ class ArcadeTetris(arcade.Window):
         )
 
         self._ai = AI(
-            state_size=(self._tm.size_grid_x, self._tm.size_grid_y, 2),
+            state_size=(self._tm.size_grid_x, self._tm.size_grid_y),
             actions=ArcadeTetris.actions,
             learning_rate=0.0001,
         )
@@ -105,3 +105,7 @@ class ArcadeTetris(arcade.Window):
                 thresh_time_passed_input=self._thresh_time_passed_input,
                 thresh_time_passed_drop=self._thresh_time_passed_drop,
             )
+
+            # debug only
+            self._ai.set_reward(self._tm, game_state, self._tm.score)
+
