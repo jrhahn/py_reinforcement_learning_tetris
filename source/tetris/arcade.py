@@ -7,10 +7,11 @@ from tetris_manager import TetrisManager
 
 
 class ArcadeTetris(arcade.Window):
-    actions = [arcade.key.LEFT, arcade.key.RIGHT, arcade.key.UP]
+    actions = [arcade.key.LEFT, arcade.key.RIGHT, arcade.key.UP, None]
 
     def __init__(self, screen_width: int, screen_height: int, ):
 
+        self._do_use_player_control = False
         self._do_draw = True
 
         super().__init__(width=screen_width, height=screen_height, )
@@ -42,7 +43,8 @@ class ArcadeTetris(arcade.Window):
         )
 
         self._ai = AI(
-            state_size=(self._tm.size_grid_x, self._tm.size_grid_y),
+            state_size=(self._tm.size_grid_x, self._tm.size_grid_y, 2),
+            num_frames=2,
             actions=ArcadeTetris.actions,
             learning_rate=0.0001,
         )
