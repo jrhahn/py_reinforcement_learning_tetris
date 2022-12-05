@@ -364,7 +364,7 @@ class AI:
             ))
 
         # Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs_: next_states_mb})
-        # Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs: states_mb})
+        # Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs: states_mb}))
 
         # Set Q_target = r if the episode ends at s+1, otherwise set Q_target = r + gamma*maxQ(s', a')
         for i in range(0, len(batch)):
