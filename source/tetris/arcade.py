@@ -72,17 +72,23 @@ class ArcadeTetris(arcade.Window):
         game_state = self._tm.update(delta_time)
 
         if not self.do_use_player_control:
-            # key = self._ai.get_action(self._tm)
-            key = 0
+            action = self._ai.predict_action(self._tm.state)
+        else:
+            action = 0  # todo get user input
 
-            if key == arcade.key.LEFT:
-                self._tm.set_move(-1, 0)
-            elif key == arcade.key.RIGHT:
-                self._tm.set_move(1, 0)
-            elif key == arcade.key.UP:
-                self._tm.rotate()
+        if action == arcade.key.LEFT:
+            self._tm.set_move(-1, 0)
+        elif action == arcade.key.RIGHT:
+            self._tm.set_move(1, 0)
+        elif action == arcade.key.UP:
+            self._tm.rotate()
 
-            # self._ai.set_reward(self._tm, game_state, self._tm.score)
+        self._ai.set_reward(
+            action=action,
+            state=self._tm.state,
+            game_state=game_state,
+            reward=self._tm.score,
+        )
 
         if self._prev_state is None:
             self._prev_state = self._tm.state
@@ -107,7 +113,3 @@ class ArcadeTetris(arcade.Window):
                 thresh_time_passed_input=self._thresh_time_passed_input,
                 thresh_time_passed_drop=self._thresh_time_passed_drop,
             )
-
-            # debug only
-            self._ai.set_reward(self._tm, game_state, self._tm.score)
-

@@ -45,7 +45,7 @@ class NoDisplayTetris(object):
         game_state = self._tm.update(delta_time)
 
         if not self._do_use_player_control:
-            key = self._ai.get_action(self._tm)
+            key = self._ai.predict_action(self._tm.state)
 
             if key == NoDisplayTetris.arcade_key_left:
                 self._tm.set_move(move_x=-1, move_y=0)

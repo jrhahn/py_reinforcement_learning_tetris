@@ -4,11 +4,10 @@ from typing import List, Tuple, Deque
 
 import numpy as np
 import tensorflow
-from keras.layers import concatenate, RepeatVector
 from tensorflow import float32
 from tensorflow.python.keras import Input
 from tensorflow.python.keras.backend import placeholder, tile
-from tensorflow.python.keras.layers import Embedding, Reshape, Dense
+from tensorflow.python.keras.layers import Embedding, Reshape, Dense, Flatten
 from tensorflow.python.keras.models import Sequential, Model
 from tensorflow.python.keras.optimizer_v2.adam import Adam
 from tensorflow.python.keras.optimizer_v2.optimizer_v2 import OptimizerV2
@@ -38,7 +37,6 @@ class AI:
         # self._earning_rate = learning_rate
 
         self._q_model = self._build_model(
-            num_frames=num_frames,
             optimizer=Adam(lr=learning_rate)
         )
 
@@ -62,7 +60,6 @@ class AI:
         self._memory = Memory(max_size=self._memory_size)
 
         self.current_step = 0
-        self.current_action = actions[0]
         self.current_state = None
         self.max_steps = 50000  # todo value?
 
@@ -93,12 +90,12 @@ class AI:
 
     def _build_model(
             self,
-            num_frames: int,
             optimizer: OptimizerV2,
             # name="AINetwork",
-    ) -> Sequential:
-
-        input_state = Input(shape=list(self._state_size)+ [1])
+    ) -> Model:
+        #
+        # input_state = Input(shape=list(self._state_size) + [1])
+        input_state = Input(shape=list(self._state_size))
 
         # output_action = Dense(1, activation="relu")(input_action)
 
@@ -107,7 +104,8 @@ class AI:
         # input_b= Input(shape=(num_frames, len(self._actions)))
 
         # the first branch operates on the first input
-        x = Dense(8, activation="relu")(input_state)
+        x = Flatten()(input_state)
+        x = Dense(8, activation="relu")(x)
         x = Dense(2, activation="relu")(x)
         # x = Model(inputs=input_a, outputs=x)
 
@@ -127,13 +125,19 @@ class AI:
         output_state = Dense(len(self._actions), activation="linear")(output_state)
         # output_state = tile(x, [1, 1, 1, len(self._actions)])
 
-        input_action = Input(shape=[1, 1, 1, len(self._actions)])
-        output_action = tile(input_action, [1] + list(self._state_size)+[1])
+        # input_action = Input(shape=[1, 1, 1, len(self._actions)])
+        # output_action = tile(input_action, [1] + list(self._state_size) + [1])
+        input_action = Input(shape=[len(self._actions)])
+        output_action = input_action
+        # output_action = Dense(len(self._actions), activation="linear")(input_action)
+        # output_action = input_action
+        # output_action = tile(input_action, [1] + list(self._state_size) + [1])
 
-        q = tensorflow.math.reduce_sum(tensorflow.math.multiply(output_state, output_action))
+        # q = tensorflow.math.reduce_sum(tensorflow.math.multiply(output_state, output_action))
+        q = tensorflow.math.multiply(output_state, output_action)
 
         Q = Model(inputs=[input_state, input_action], outputs=q)
-        # Q = Model(inputs=input_state, outputs=output)
+        # Q = Model(inputs=input_state, outputs=q)
         # Q = Model(inputs= input_action, outputs=output_action)
         Q.compile(loss="mse", optimizer=optimizer)
 
@@ -207,7 +211,7 @@ class AI:
         return stacked_frames
 
     # def predict_action(self, explore_start, explore_stop, state, actions):
-    def predict_action(self, state):
+    def predict_action(self, state: np.array) -> int:
         ## EPSILON GREEDY STRATEGY
         # Choose action a from state s using epsilon greedy.
         ## First we randomize a number
@@ -224,50 +228,33 @@ class AI:
             logger.info("Prediction")
             # Get action from Q-network (exploitation)
             # Estimate the Qs values state
-            # Qs = self.sess.run(self.output, feed_dict={self.inputs: state.reshape((1, *state.shape))})
-            q_values = self._q_network.predict(state)
+            # todo try all actions
+            q_values = self._q_model.predict(state)
 
             # Take the biggest Q value (= the best action)
             choice = np.argmax(q_values)
 
-        self.current_action = self._actions[choice]
+        current_action = self._actions[choice]
 
-        return self.current_action  # , explore_probability
+        return current_action  # , explore_probability
 
-    def get_action(self, tm: TetrisManager) -> int:
-        # Increase decay_step
-        self._decay_step += 0.001
-
-        # Predict the action to take and take it
-        # self.current_action, explore_probability = self.predict_action(tm.n_array)
-
-        current = tm.state
-        if self._prev_state is None:
-            self._prev_state = current
-
-        state = np.stack((self._prev_state, current), axis=2)
-        self._prev_state = current
-
-        self.current_state = self.stack_frames(state, True)
-        self.current_action = self.predict_action(self.current_state)
-
-        return self.current_action
-
-    def set_reward(self, tm: TetrisManager, game_state: GameState, reward: float) -> None:
+    def set_reward(
+            self,
+            action: int,
+            state: np.array,
+            game_state: GameState,
+            reward: float,
+    ) -> None:
         # Add the reward to total reward
         self.episode_rewards.append(reward)
 
         self.current_step -= 1
 
-        # current = tm.state
-        # if self._prev_state is None:
-        #     self._prev_state = current
-
-        # state = np.stack((self._prev_state, current), axis=2)
-        # self._prev_state = current
-
-        next_state = self._stack_frames(frame=tm.state, stacked_frames=self._current_state.copy(),
-                                        is_new_episode=False, )
+        next_state = self._stack_frames(
+            frame=state,
+            stacked_frames=self._current_state.copy(),
+            is_new_episode=False,
+        )
 
         # If the game is finished
         if game_state == GameState.End or self.current_step == 0:
@@ -298,7 +285,7 @@ class AI:
             self.l_rewards.append((self.episode, total_reward))
 
             # Store transition <st,at,rt+1,st+1> in memory D
-            self._memory.add((next_state, self.current_action, reward, next_state, True))
+            self._memory.add((next_state, action, reward, next_state, True))
 
         else:
             # Stack the frame of the next_state
@@ -309,32 +296,22 @@ class AI:
 
             # Add experience to memory
             self._memory.add(
-                (self._current_state, self.current_action, reward, next_state, False)
+                (self._current_state, action, reward, next_state, False)
             )
 
         self._current_state = next_state
 
-        # st+1 is now our current state
-        # state = next_state
-
-    @staticmethod
-    def get_block_state(tm: TetrisManager) -> Tuple:
-        return tm.block_active.type, tm.block_active.x_grid, tm.block_active.y_grid
-
     def actions_to_one_hot(self, actions: np.array):
         actions_inv = {v: k for k, v in enumerate(self._actions)}
 
-        n_vecs = np.eye(len(self._actions))
+        identiy_matrix = np.eye(len(self._actions))
 
-        actions_cat = [n_vecs[actions_inv[d], :] for d in actions]
+        actions_cat = [identiy_matrix[actions_inv[d], :] for d in actions]
 
         return np.vstack(actions_cat)
 
     def train(self) -> None:
         logger.info("Training")
-
-        # todo add memory
-        # Obtain random mini-batch from memory
 
         if self._memory.empty:
             return
@@ -344,49 +321,41 @@ class AI:
         states_mb = np.array([each[0] for each in batch], ndmin=3)
         actions_mb = np.array([each[1] for each in batch])
         rewards_mb = np.array([each[2] for each in batch])
-        # dones_mb = np.array([each[3] for each in batch])
         next_states_mb = np.array([each[3] for each in batch], ndmin=3)
         dones_mb = np.array([each[4] for each in batch])
 
-        target_Qs_batch = []
+        target_qs_batch = []
 
         actions_cat = self.actions_to_one_hot(actions=actions_mb)
 
         # Get Q values for next_state
-        print(next_states_mb.shape)
-        print(actions_cat.shape)
-        Qs_next_state = self._q_model.predict(
-            (
-                # np.tile(states_mb.reshape(list(states_mb.shape) + [1]), (1, 1, 1, 1, len(self._actions))),
-                states_mb.reshape(list(states_mb.shape) + [1]),
-                actions_cat.reshape([actions_cat.shape[0],1,1,1, actions_cat.shape[1]])
-                #np.tile(actions_cat, [1] + list(states_mb.shape[1:]) + [1])
-            ))
+        q_next_state = self._q_model.predict(
+            (next_states_mb, actions_cat)
+        )
 
-        # Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs_: next_states_mb})
-        # Qs_next_state = self.sess.run(self.output, feed_dict={self.inputs: states_mb}))
+        if len(q_next_state) != next_states_mb.shape[0]:
+            raise ValueError(f"Wrong size: {len(q_next_state)} (expected {next_states_mb.shape[0]})")
 
         # Set Q_target = r if the episode ends at s+1, otherwise set Q_target = r + gamma*maxQ(s', a')
         for i in range(0, len(batch)):
-            terminal = dones_mb[i]
-
             # If we are in a terminal state, only equals reward
-            if terminal:
-                target_Qs_batch.append(rewards_mb[i])
+            if dones_mb[i]:
+                target_qs_batch.append(rewards_mb[i])
 
             else:
-                target = rewards_mb[i] + self.gamma * np.max(Qs_next_state[i])
-                target_Qs_batch.append(target)
+                target = rewards_mb[i] + self.gamma * np.max(q_next_state[i])
+                target_qs_batch.append(target)
 
-        targets_mb = np.array([each for each in target_Qs_batch])
+        # targets_mb = np.array([each for each in target_qs_batch])
+        targets_mb = np.array(target_qs_batch)
 
         # convert actions
 
+        if len(states_mb) != len(targets_mb):
+            raise ValueError("bla")
+
         history = self._q_model.fit(
-            x=(
-                states_mb.reshape(list(states_mb.shape) + [1]),
-                actions_cat.reshape([actions_cat.shape[0],1,1,1, actions_cat.shape[1]])
-            ),
+            x=(states_mb, actions_cat),
             y=targets_mb
         )
 
