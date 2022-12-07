@@ -68,7 +68,7 @@ class ArcadeTetris(arcade.Window):
         game_state = self._tm.update(delta_time)
 
         if not self.do_use_player_control:
-            action = self._ai.predict_action(self._tm.state)
+            action = self._ai.predict_action()
         else:
             action = 0  # todo get user input
 

@@ -35,8 +35,6 @@ class AI:
         # Initialize the decay rate (that will use to reduce epsilon)
         self._decay_step = 0
 
-        # self.saver = tf.train.Saver()
-
         self._memory_size = 10000
 
         self._memory = Memory(max_size=self._memory_size)
@@ -56,17 +54,11 @@ class AI:
 
         self.num_frames_stacked = 2
 
-        # Initialize deque with zero-images one array for each image
         self._current_state = AI._init_stack(state_size=state_size, )
 
     @staticmethod
     def _init_stack(state_size: Tuple) -> np.ndarray:
-        # d = deque(maxlen=self.num_frames_stacked)
-        d = np.zeros(state_size)
-        # for ii in range(self.num_frames_stacked):
-        #     d.append(np.zeros(state_size, dtype=np.int))
-
-        return d
+        return np.zeros(state_size)
 
     def _build_model(
             self,
@@ -177,7 +169,7 @@ class AI:
         return stacked_frames
 
     # def predict_action(self, explore_start, explore_stop, state, actions):
-    def predict_action(self, state: np.array) -> int:
+    def predict_action(self) -> int:
         ## EPSILON GREEDY STRATEGY
         # Choose action a from state s using epsilon greedy.
         ## First we randomize a number

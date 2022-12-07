@@ -1,7 +1,7 @@
 import logging
 
-from ai import AI
 from data_types.game_state import GameState
+from learning.ai import AI
 from tetris.arcade import ArcadeTetris
 from tetris_manager import TetrisManager
 
@@ -16,9 +16,6 @@ class NoDisplayTetris(object):
     actions = [arcade_key_left, arcade_key_right, arcade_key_up]
 
     def __init__(self, screen_width: int, screen_height: int, ):
-
-        self._do_use_player_control = False
-
         self._thresh_time_passed_input = 0
         self._thresh_time_passed_drop = 0
 
@@ -37,24 +34,28 @@ class NoDisplayTetris(object):
 
         self._ai = AI(
             state_size=(self._tm.size_grid_x, self._tm.size_grid_y, 2),
-            actions=ArcadeTetris.l_actions,
+            actions=ArcadeTetris.actions,
             learning_rate=0.0001,
         )
 
     def update(self, delta_time: float) -> None:
         game_state = self._tm.update(delta_time)
 
-        if not self._do_use_player_control:
-            key = self._ai.predict_action(self._tm.state)
+        action = self._ai.predict_action()
 
-            if key == NoDisplayTetris.arcade_key_left:
-                self._tm.set_move(move_x=-1, move_y=0)
-            elif key == NoDisplayTetris.arcade_key_right:
-                self._tm.set_move(move_x=1, move_y=0)
-            elif key == NoDisplayTetris.arcade_key_up:
-                self._tm.rotate()
+        if action == NoDisplayTetris.arcade_key_left:
+            self._tm.set_move(move_x=-1, move_y=0)
+        elif action == NoDisplayTetris.arcade_key_right:
+            self._tm.set_move(move_x=1, move_y=0)
+        elif action == NoDisplayTetris.arcade_key_up:
+            self._tm.rotate()
 
-            self._ai.set_reward(self._tm, game_state, self._tm.score)
+        self._ai.set_reward(
+            action=action,
+            state=self._tm.state,
+            game_state=game_state,
+            reward=self._tm.score,
+        )
 
         if game_state == GameState.End:
             self._ai.train()
@@ -73,6 +74,3 @@ class NoDisplayTetris(object):
                 thresh_time_passed_input=self._thresh_time_passed_input,
                 thresh_time_passed_drop=self._thresh_time_passed_drop,
             )
-
-            # debug only
-            self._ai.set_reward(self._tm, game_state, self._tm.score)
