@@ -53,7 +53,10 @@ class AI:
         self.episode = 0
         self.gamma = 0.99
 
-        self.num_frames_stacked = 2
+        self.num_frames_stacked = state_size[-1]
+
+        self._path_save = Path("..") / "model"
+        self._path_save.mkdir(exist_ok=True)
 
         self._current_state = AI._init_stack(state_size=state_size, )
 
@@ -135,15 +138,10 @@ class AI:
 
         return Q
 
-    def save(self):
-        # save_path = self.saver.save(self.sess, "./models/model.ckpt")
-        # print("Model saved to {}".format(save_path))
+    def save(self) -> None:
+        self._q_model.save(self._path_save)
+        logger.info(f"Model saved to {self._path_save}")
 
-        path_save = Path("model")
-        path_save.mkdir(exist_ok=True)
-        self._q_model.save(path_save)
-
-        pass
 
     #     # Add ops to save and restore all the variables.
     #     saver = tf.train.Saver()
