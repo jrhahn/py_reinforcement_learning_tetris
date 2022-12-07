@@ -27,28 +27,15 @@ class AI:
             state_size: Tuple,
             actions: List,
             learning_rate: float,
-            num_frames: int,
-            name: str = "DQNetwork",
     ):
         self._state_size = state_size
 
         self._actions = actions
         self._num_actions = len(actions)
-        # self._earning_rate = learning_rate
 
         self._q_model = self._build_model(
             optimizer=Adam(lr=learning_rate)
         )
-
-        # self.target_Q = placeholder(float32, [None], name="target")
-
-        # self.loss = tensorflow.math.reduce_mean(tensorflow.math.square(self.target_Q - Q))
-        # self.optimizer = AdamOptimizer(learning_rate).minimize(self.loss)
-
-        # todo here
-        # self.sess = tf.Session()
-        # Initialize the variables
-        # self.sess.run(tf.global_variables_initializer())
 
         # Initialize the decay rate (that will use to reduce epsilon)
         self._decay_step = 0
@@ -73,8 +60,6 @@ class AI:
         self.gamma = 0.99
 
         self.num_frames_stacked = 2
-
-        # self._prev_state = None
 
         # Initialize deque with zero-images one array for each image
         self._current_state = AI._init_stack(state_size=state_size, )
@@ -187,27 +172,13 @@ class AI:
             stacked_frames: np.ndarray,
             is_new_episode: bool,
     ) -> np.ndarray:
-        # Preprocess frame
-        # frame = preprocess_frame(state)
-        # frame = state
-
         if is_new_episode:
-            # Clear our stacked_frames
             stacked_frames = AI._init_stack(state_size=stacked_frames.shape)
-
-            # for ii in range(self.num_frames_stacked):
-            #     self.stacked_frames.append(frame)
-
         else:
-            # Append frame to deque, automatically removes the oldest frame
             stacked_frames = np.dstack((stacked_frames[:, :, -1], frame))
-
-        # Build the stacked state (first dimension specifies different frames)
-        # stacked_state = np.stack(self.stacked_frames, axis=2)
 
         assert stacked_frames.shape[2] == 2, f"shape is {stacked_frames.shape}"
 
-        # return stacked_state
         return stacked_frames
 
     # def predict_action(self, explore_start, explore_stop, state, actions):
@@ -222,6 +193,10 @@ class AI:
         explore_probability = np.exp(-self.decay_rate * self._decay_step)
 
         if explore_probability > exp_exp_tradeoff:
+            logger.info(
+                f"Exploration: {explore_probability} > {exp_exp_tradeoff}"
+                f"(decay rate: {self.decay_rate}, decay_step: {self._decay_step})"
+            )
             # Make a random action (exploration)
             choice = np.random.randint(0, self._num_actions)
         else:
@@ -229,7 +204,13 @@ class AI:
             # Get action from Q-network (exploitation)
             # Estimate the Qs values state
             # todo try all actions
-            q_values = self._q_model.predict(state)
+
+            actions_cat = self.actions_to_one_hot(actions=self._actions)
+
+            q_values = self._q_model.predict(
+                (np.tile(self._current_state, [len(self._actions), 1, 1, 1]),
+                 actions_cat)
+            )
 
             # Take the biggest Q value (= the best action)
             choice = np.argmax(q_values)

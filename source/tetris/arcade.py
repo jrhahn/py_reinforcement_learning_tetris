@@ -44,7 +44,6 @@ class ArcadeTetris(arcade.Window):
 
         self._ai = AI(
             state_size=(self._tm.size_grid_x, self._tm.size_grid_y, 2),
-            num_frames=2,
             actions=ArcadeTetris.actions,
             learning_rate=0.0001,
         )
