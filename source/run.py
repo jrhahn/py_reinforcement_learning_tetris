@@ -4,11 +4,10 @@ import time
 
 import arcade
 
-from source.tetris.arcade import ArcadeTetris
+from tetris.arcade import ArcadeTetris
 from tetris.no_display import NoDisplayTetris
 
 logging.basicConfig(level=logging.INFO)
-
 
 
 def run():
@@ -18,7 +17,7 @@ def run():
     # game = ArcadeTetris(screen_width=320, screen_height=480, )
     # arcade.run()
 
-    game = NoDisplayTetris(screen_width=320, screen_height=480,)
+    game = NoDisplayTetris(screen_width=320, screen_height=480, )
 
     duration = 0
     while True:
