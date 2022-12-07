@@ -1,21 +1,16 @@
 import logging
-from collections import deque
-from typing import List, Tuple, Deque
+from typing import List, Tuple
 
 import numpy as np
 import tensorflow
-from tensorflow import float32
 from tensorflow.python.keras import Input
-from tensorflow.python.keras.backend import placeholder, tile
-from tensorflow.python.keras.layers import Embedding, Reshape, Dense, Flatten
-from tensorflow.python.keras.models import Sequential, Model
+from tensorflow.python.keras.layers import Dense, Flatten
+from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.optimizer_v2.adam import Adam
 from tensorflow.python.keras.optimizer_v2.optimizer_v2 import OptimizerV2
-from tensorflow.python.training.adam import AdamOptimizer
 
 from data_types.game_state import GameState
 from learning.memory import Memory
-from tetris_manager import TetrisManager
 
 logger = logging.getLogger(__name__)
 
