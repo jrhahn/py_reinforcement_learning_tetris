@@ -11,9 +11,6 @@ logging.basicConfig(level=logging.INFO)
 
 
 def run():
-    # Reset the graph
-    # tf.reset_default_graph()
-
     # game = ArcadeTetris(screen_width=320, screen_height=480, )
     # arcade.run()
 
