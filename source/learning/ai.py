@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
@@ -137,6 +138,11 @@ class AI:
     def save(self):
         # save_path = self.saver.save(self.sess, "./models/model.ckpt")
         # print("Model saved to {}".format(save_path))
+
+        path_save = Path("model")
+        path_save.mkdir(exist_ok=True)
+        self._q_model.save(path_save)
+
         pass
 
     #     # Add ops to save and restore all the variables.
@@ -180,14 +186,14 @@ class AI:
         explore_probability = np.exp(-self.decay_rate * self._decay_step)
 
         if explore_probability > exp_exp_tradeoff:
-            logger.info(
+            logger.debug(
                 f"Exploration: {explore_probability} > {exp_exp_tradeoff}"
                 f"(decay rate: {self.decay_rate}, decay_step: {self._decay_step})"
             )
             # Make a random action (exploration)
             choice = np.random.randint(0, self._num_actions)
         else:
-            logger.info("Prediction")
+            logger.debug("Prediction")
             # Get action from Q-network (exploitation)
             # Estimate the Qs values state
             # todo try all actions

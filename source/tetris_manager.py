@@ -82,11 +82,11 @@ class TetrisManager:
         for y in range(self.size_grid_y):
             is_complete = (self._array[:, y] > 0).all()
 
-            self.score += (
-                    self._array[:, y].sum()
-                    * (self.size_grid_y - y)
-                    / float(self.size_grid_y)
-            )
+            # self.score += (
+            #         self._array[:, y].sum()
+            #         * (self.size_grid_y - y)
+            #         / float(self.size_grid_y)
+            # )
 
             if is_complete:
                 self.score += 1000
@@ -102,8 +102,10 @@ class TetrisManager:
 
             self.check_if_line_is_full()
 
+        self.score += np.mean(self._array.ravel())
+
         if self._array[:, -2].sum() > 0:
-            self.score -= 500
+            # self.score -= 500
             logger.info(f"Score: {self.score}")
             logger.info("***NEW GAME***")
 
