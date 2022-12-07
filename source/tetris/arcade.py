@@ -1,5 +1,4 @@
 import arcade
-import numpy as np
 
 from data_types.game_state import GameState
 from learning.ai import AI
@@ -48,8 +47,6 @@ class ArcadeTetris(arcade.Window):
             learning_rate=0.0001,
         )
 
-        self._prev_state = None
-
     def on_draw(self):
         if self._do_draw:
             arcade.start_render()
@@ -88,19 +85,6 @@ class ArcadeTetris(arcade.Window):
             game_state=game_state,
             reward=self._tm.score,
         )
-
-        if self._prev_state is None:
-            self._prev_state = self._tm.state
-
-        # self._ai.stack_frames(
-        #     state=np.stack(
-        #         (self._prev_state,
-        #          self._tm.state), axis=2
-        #     ),
-        #     is_new_episode=game_state == GameState.Start
-        # )
-
-        self._prev_state = self._tm.state
 
         if game_state == GameState.End:
             self._ai.train()
