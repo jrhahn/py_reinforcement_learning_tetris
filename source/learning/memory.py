@@ -1,14 +1,17 @@
+import logging
 from collections import deque
 from typing import List, Tuple
 
 import numpy as np
 
+logger = logging.getLogger(__name__)
 
 class Memory:
     def __init__(self, max_size: int) -> None:
         self.buffer = deque(maxlen=max_size)
 
     def add(self, experience: Tuple) -> None:
+        logger.debug(f"Memory size: {len(self.buffer)}")
         self.buffer.append(experience)
 
     def sample(self, batch_size: int) -> List:
